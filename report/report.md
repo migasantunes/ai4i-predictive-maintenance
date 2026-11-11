@@ -25,3 +25,12 @@ We preferred this to dropping the multi-mode rows. Dropping them would remove 24
 `UDI` and `Product ID` are dropped as identifiers. The failure-mode columns are never used as inputs, because the targets are built from them. We add three features, each tied to a failure rule in the dataset description: temperature difference (process − air) for HDF, mechanical power (torque × angular speed, in W) for PWF, and strain (tool wear × torque) for OSF, whose threshold depends on `Type`.
 
 `Type` is one-hot encoded with fixed categories. The numeric features are standardised for the MLP, which is sensitive to the very different scales, but not for the Random Forest, whose splits do not depend on scale. Both steps run inside a scikit-learn Pipeline, so they are fitted only on the training data of each fold and nothing leaks from validation or test data.
+
+### Splits and validation
+
+Each task gets its own 75/25 train/test split, stratified on its target with `random_state = 42`:
+- Binary: 7 500 / 2 500 rows (85 test failures).
+- Multiclass: 7 479 / 2 494 rows (11 TWF, 27 HDF, 21 PWF, 24 OSF in test). 
+The row indices are saved so every experiment uses the same split. 
+
+CV split is now fixed in `get_cv()`, which returns a `RepeatedStratifiedKFold` object. The number of repeats can be set.

@@ -48,8 +48,9 @@ Create an environment with Python 3.14.3 (Tested on Python 3.14.3) and install t
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # Windows: .\.venv\Scripts\activate
+source .venv/bin/activate          # Windows: .\.venv\Scripts\activate
 pip install -r requirements.txt
+nbstripout --install               # strips notebook outputs on commit (run once per clone)
 ```
 
 ## Running the Notebooks
@@ -58,6 +59,15 @@ pip install -r requirements.txt
 2. Open the notebooks in your preferred IDE or Jupyter Notebook
 3. Select the kernel from .venv
 4. Run the notebooks by clicking `Restart` and then `Run All` in the notebook interface.
+
+## Using the splits
+Run `notebooks/01_data_eda.ipynb` once to create `data/splits/*.npy` if not already committed.
+
+```python
+from src.splits import load_split, get_cv
+X_train, X_test, y_train, y_test = load_split("binary")  # or "multi"
+cv = get_cv(n_repeats=3)  # validation folds on X_train only, n_repeats is the number of repeated runs of cv
+```
 
 ## Additional Information
 
