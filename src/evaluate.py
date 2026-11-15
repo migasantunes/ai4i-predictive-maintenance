@@ -264,11 +264,24 @@ def _fold_metrics_multi(y_true, pred):
     missed = cm[1:, 0]                  # real failure (classes 1-4), predicted "No failure"
     false_alarms = cm[0, 1:].sum()      # real "No failure", predicted as any failure
 
+
+    #section that show all real failures, so we can use to find the minimum recall of 75%
+    n_fail = cm[1:, :].sum()       # real failures (any type)
+    detected = cm[1:, 1:].sum()    # real failures predicted as ANY failure
+    flagged = cm[:, 1:].sum()      # every machine predicted as a failure
+    det_recall = detected / n_fail if n_fail else 0.0
+    det_precision = detected / flagged if flagged else 0.0
+    det_f1 = (2 * det_precision * det_recall / (det_precision + det_recall)
+          if (det_precision + det_recall) else 0.0)
+
     row = {
         "accuracy": accuracy_score(y_true, pred),
         "f1_macro": f1.mean(),
         "missed_failures": missed.sum(),
         "false_alarms": false_alarms,
+        "detection_recall": det_recall,
+        "detection_precision": det_precision,
+        "detection_f1": det_f1,
     }
     for k, name in enumerate(NAMES[1:]):  
         row[f"missed_{name}"] = missed[k]
@@ -362,3 +375,26 @@ def summarize_multi(results):
         summary[f"{m}_mean"] = results[m].mean()
         summary[f"{m}_std"] = results[m].std()
     return summary
+
+
+###############################################################################
+
+def metrics_at_cut_multi(fold_probas, cut):
+    rows = []
+    for f in fold_probas:
+        p_fail = 1 - f["proba"][:, 0]                  # chance of "some failure"
+        best_fail = 1 + f["proba"][:, 1:].argmax(axis=1)   # most likely failure type
+        pred = np.where(p_fail >= cut, best_fail, 0)
+        rows.append({"repeat": f["repeat"], "fold": f["fold"],
+                     **_fold_metrics_multi(f["y_val"], pred)})
+    return pd.DataFrame(rows)
+
+
+############################################################################
+
+
+def cut_table_multi(fold_probas, cuts):
+    rows = []
+    for c in cuts:
+        rows.append({"cut": c, **summarize_multi(metrics_at_cut_multi(fold_probas, c))})
+    return pd.DataFrame(rows)
