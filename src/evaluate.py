@@ -241,3 +241,160 @@ def log_result(model_name, task, config, threshold, summary, path=LOG_PATH):
     }
     new_file = (not path.exists()) or path.stat().st_size == 0
     pd.DataFrame([row]).to_csv(path, mode="a", header=new_file, index=False)
+
+
+###########################--MULTICLASS-VERSION--##############################
+
+from .data import CLASSES
+
+LABELS = list(range(len(CLASSES)))               # [0, 1, 2, 3, 4]
+NAMES = [c.replace(" ", "_") for c in CLASSES]   # safe column names
+
+
+def _fold_metrics_multi(y_true, pred):
+    """Metrics of one fold, multiclass. Undefined metrics count as 0."""
+    cm = confusion_matrix(y_true, pred, labels=LABELS)      # 5x5 counts
+    prec = precision_score(y_true, pred, labels=LABELS, average=None, zero_division=0)
+    rec = recall_score(y_true, pred, labels=LABELS, average=None, zero_division=0)
+    f1 = f1_score(y_true, pred, labels=LABELS, average=None, zero_division=0)
+
+    tp = np.diag(cm)                 # correct answers of each class
+    fn = cm.sum(axis=1) - tp         # real k, predicted as something else
+    fp = cm.sum(axis=0) - tp         # predicted k, but it was something else
+    missed = cm[1:, 0]                  # real failure (classes 1-4), predicted "No failure"
+    false_alarms = cm[0, 1:].sum()      # real "No failure", predicted as any failure
+
+
+    #section that show all real failures, so we can use to find the minimum recall of 75%
+    n_fail = cm[1:, :].sum()       # real failures (any type)
+    detected = cm[1:, 1:].sum()    # real failures predicted as ANY failure
+    flagged = cm[:, 1:].sum()      # every machine predicted as a failure
+    det_recall = detected / n_fail if n_fail else 0.0
+    det_precision = detected / flagged if flagged else 0.0
+    det_f1 = (2 * det_precision * det_recall / (det_precision + det_recall)
+          if (det_precision + det_recall) else 0.0)
+
+    row = {
+        "accuracy": accuracy_score(y_true, pred),
+        "f1_macro": f1.mean(),
+        "missed_failures": missed.sum(),
+        "false_alarms": false_alarms,
+        "detection_recall": det_recall,
+        "detection_precision": det_precision,
+        "detection_f1": det_f1,
+    }
+    for k, name in enumerate(NAMES[1:]):  
+        row[f"missed_{name}"] = missed[k]
+    for k, name in enumerate(NAMES):
+        row[f"precision_{name}"] = prec[k]
+        row[f"recall_{name}"] = rec[k]
+        row[f"f1_{name}"] = f1[k]
+        row[f"fn_{name}"] = fn[k]
+        row[f"fp_{name}"] = fp[k]
+    return row
+
+
+###########################################################################
+
+def evaluate_multi(model, X, y, n_splits=5, n_repeats=3, random_state=42):
+    """
+    Repeated stratified k-fold cross-validation on the TRAINING set only,
+    for the multiclass task (5 classes, decision by argmax).
+
+    Same procedure as evaluate(): a fresh clone of the model is trained in each
+    fold and the model passed in is never modified. There is no threshold here:
+    the predicted class is the one with the highest probability.
+
+    Parameters:
+    model: unfitted scikit-learn estimator or Pipeline with fit() and predict_proba().
+    X: pd.DataFrame, training features.
+    y: training labels (0..4), same length as X.
+    n_splits: number of folds (default 5).
+    n_repeats: number of times the k-fold split is repeated (default 3).
+    random_state: seed, so the folds are reproducible.
+
+    Returns:
+    results: pd.DataFrame, one row per fold with repeat, fold, accuracy,
+        f1_macro and precision, recall, f1, fn, fp for each class.
+    fold_probas: list of dicts, one per fold, with repeat, fold, y_val and proba
+        (array n_val x 5, one column per class).
+    """
+
+    y = np.asarray(y)
+    cv = RepeatedStratifiedKFold(n_splits=n_splits, n_repeats=n_repeats, random_state=random_state)
+
+    rows = []
+    fold_probas = []
+    for i, (train_idx, val_idx) in enumerate(cv.split(X, y)):
+        X_tr, X_val = X.iloc[train_idx], X.iloc[val_idx]
+        y_tr, y_val = y[train_idx], y[val_idx]
+
+        m = clone(model)
+        m.fit(X_tr, y_tr)
+
+        proba = m.predict_proba(X_val)                  # n_val x 5
+        pred = m.classes_[proba.argmax(axis=1)]         # most likely class
+
+        fold_probas.append({
+            "repeat": i // n_splits,
+            "fold": i % n_splits,
+            "y_val": y_val,
+            "proba": proba,
+        })
+        rows.append({
+            "repeat": i // n_splits,
+            "fold": i % n_splits,
+            **_fold_metrics_multi(y_val, pred),
+        })
+
+    return pd.DataFrame(rows), fold_probas
+
+
+###################################################################################
+
+
+def summarize_multi(results):
+    """
+    Mean and std, over the folds, of every multiclass validation metric.
+
+    Parameters:
+    results: pd.DataFrame with one row per fold, as returned by evaluate_multi().
+
+    Returns:
+    dict with <metric>_mean and <metric>_std for every metric column
+    (repeat and fold are only labels, so they are skipped).
+
+    Example:
+    >>> results, probas = evaluate_multi(model, X_train, y_train)
+    >>> summary = summarize_multi(results)
+    >>> summary["recall_TWF_mean"], summary["recall_TWF_std"]
+    """
+    metrics = results.columns.drop(["repeat", "fold"])
+    summary = {}
+    for m in metrics:
+        summary[f"{m}_mean"] = results[m].mean()
+        summary[f"{m}_std"] = results[m].std()
+    return summary
+
+
+###############################################################################
+
+def metrics_at_cut_multi(fold_probas, cut):
+    rows = []
+    for f in fold_probas:
+        p_fail = 1 - f["proba"][:, 0]                  # chance of "some failure"
+        best_fail = 1 + f["proba"][:, 1:].argmax(axis=1)   # most likely failure type
+        pred = np.where(p_fail >= cut, best_fail, 0)
+        rows.append({"repeat": f["repeat"], "fold": f["fold"],
+                     **_fold_metrics_multi(f["y_val"], pred)})
+    return pd.DataFrame(rows)
+
+
+############################################################################
+
+
+def cut_table_multi(fold_probas, cuts):
+    rows = []
+    for c in cuts:
+        rows.append({"cut": c, **summarize_multi(metrics_at_cut_multi(fold_probas, c))})
+    return pd.DataFrame(rows)
