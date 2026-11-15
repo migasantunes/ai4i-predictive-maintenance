@@ -1,0 +1,11 @@
+[
+  "Rotational speed [rpm]",
+  "Torque [Nm]",
+  "Tool wear [min]",
+  "Temp diff [K]",
+  "Power [W]",
+  "Strain [min Nm]",
+  "Type_L",
+  "Type_M",
+  "Type_H"
+]

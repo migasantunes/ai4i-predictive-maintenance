@@ -101,6 +101,8 @@ def preprocess(df, task):
 
     df = add_features(df.drop(rows_to_drop(df, task)))
     X = df[NUMERIC + ["Type"]].copy()
+    X["Type"] = pd.Categorical(X["Type"], categories=["L", "M", "H"])
+    X = pd.get_dummies(X, columns=["Type"], dtype=int)
     if task == "binary":
         y = df["Machine failure"]
     else:

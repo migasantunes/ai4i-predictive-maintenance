@@ -6,7 +6,7 @@ from sklearn.metrics import  accuracy_score, precision_score, recall_score, f1_s
 import json
 from pathlib import Path
 
-
+THRESHOLDS = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5]
 def _fold_metrics(y_true, pred):
     """Metrics for class 1 of one fold. Undefined metrics count as 0."""
     tn, fp, fn, tp = confusion_matrix(y_true, pred, labels=[0, 1]).ravel()
