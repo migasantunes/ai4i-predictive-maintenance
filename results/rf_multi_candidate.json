@@ -1,0 +1,25 @@
+{
+  "model": "RF",
+  "task": "multi",
+  "name": "max_features=0.5",
+  "params": {
+    "n_estimators": 300,
+    "max_depth": null,
+    "min_samples_leaf": 1,
+    "max_features": 0.5,
+    "class_weight": "none"
+  },
+  "cut": 0.25,
+  "features": [
+    "Rotational speed [rpm]",
+    "Torque [Nm]",
+    "Tool wear [min]",
+    "Temp diff [K]",
+    "Power [W]",
+    "Strain [min Nm]",
+    "Type_L",
+    "Type_M",
+    "Type_H"
+  ],
+  "rule": "highest macro F1 with mean detection recall >= 0.75, averaged over 4 CV seeds"
+}

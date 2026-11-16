@@ -1,0 +1,7 @@
+config,cut,det_recall,det_recall_sd,det_precision,f1_macro,f1_macro_sd,missed,false_alarms,rec_TWF,rec_HDF,rec_PWF,rec_OSF,params
+rf_Multi_39,0.25,0.8802,0.0038,0.8459,0.8012,0.0056,5.9167,8.1167,0.1476,0.9884,0.984,0.9402,"{""class_weight"": ""none"", ""max_depth"": null, ""max_features"": 1.0, ""min_samples_leaf"": 1, ""n_estimators"": 100}"
+max_features=1.0,0.25,0.8799,0.0052,0.8484,0.8003,0.0075,5.9333,7.95,0.1429,0.9895,0.984,0.9426,"{""class_weight"": ""none"", ""max_depth"": null, ""max_features"": 1.0, ""min_samples_leaf"": 1, ""n_estimators"": 300}"
+max_features=0.75,0.25,0.8806,0.0008,0.8636,0.799,0.0028,5.9,7.0667,0.1214,0.9938,0.9853,0.9566,"{""class_weight"": ""none"", ""max_depth"": null, ""max_features"": 0.75, ""min_samples_leaf"": 1, ""n_estimators"": 300}"
+max_features=0.5,0.25,0.8796,0.003,0.8665,0.7939,0.0032,5.95,6.9,0.1071,0.9948,0.9893,0.9648,"{""class_weight"": ""none"", ""max_depth"": null, ""max_features"": 0.5, ""min_samples_leaf"": 1, ""n_estimators"": 300}"
+baseline,0.25,0.8806,0.0028,0.8568,0.787,0.0048,5.9,7.4667,0.0976,0.9969,0.9906,0.9753,"{""class_weight"": ""none"", ""max_depth"": null, ""max_features"": ""sqrt"", ""min_samples_leaf"": 1, ""n_estimators"": 300}"
+rf_Multi_08,0.15,0.891,0.0048,0.7663,0.7853,0.0052,5.3833,13.6667,0.1714,1.0,0.984,0.9871,"{""class_weight"": ""none"", ""max_depth"": 12, ""max_features"": 1.0, ""min_samples_leaf"": 10, ""n_estimators"": 200}"
