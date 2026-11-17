@@ -1,12 +1,15 @@
+import json
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from sklearn.base import clone
 from sklearn.model_selection import RepeatedStratifiedKFold
-from sklearn.metrics import  accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-import json
-from pathlib import Path
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from .data import CLASSES
 
+# Decision thresholds (binary) and failure cut-offs (multiclass) tried on validation
 THRESHOLDS = [0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5]
+
 def _fold_metrics(y_true, pred):
     """Metrics for class 1 of one fold. Undefined metrics count as 0."""
     tn, fp, fn, tp = confusion_matrix(y_true, pred, labels=[0, 1]).ravel()
@@ -186,7 +189,7 @@ def threshold_table(fold_probas, thresholds):
 
     Returns:
     pd.DataFrame with one row per threshold: the threshold, plus the mean and
-    std of each metric over the folds (see _summarize()).
+    std of each metric over the folds (see summarize()).
 
     Example:
     >>> results, probas = evaluate(model, X_train, y_train)
@@ -205,7 +208,7 @@ LOG_PATH = Path(__file__).resolve().parent.parent / "results" / "tuning_log.csv"
 
 def log_result(model_name, task, config, threshold, summary, path=LOG_PATH):
     """
-    Append one row to results/tuning_log.csv, the shared record of every
+    Add one row to results/tuning_log.csv, the shared record of every
     configuration we tried.
 
     Use it after evaluating each configuration during tuning (not only the one
@@ -214,6 +217,10 @@ def log_result(model_name, task, config, threshold, summary, path=LOG_PATH):
     report and of the model selection meeting. Only validation results go here,
     never test results.
 
+    The log is keyed by (model, task, config): if the same configuration is
+    logged again (e.g. when a notebook is re-run), its row is replaced instead of
+    duplicated, so re-running the notebooks keeps the log clean.
+
     Parameters:
     model_name: str, e.g. "MLP" or "RF".
     task: str, "binary" or "multi".
@@ -221,31 +228,36 @@ def log_result(model_name, task, config, threshold, summary, path=LOG_PATH):
         a JSON string in a single column.
     threshold: float, the decision threshold the summary was computed at.
     summary: dict with the mean and std of the metrics, as returned by
-        _summarize() on the table from evaluate() or metrics_at_threshold().
-    path: csv file to append to (default: results/tuning_log.csv). The header is
-        written only if the file is new or empty.
+        summarize() on the table from evaluate() or metrics_at_threshold().
+    path: csv file to write to (default: results/tuning_log.csv).
 
     Example:
     >>> results, probas = evaluate(model, X_train, y_train)
     >>> t = 0.2
-    >>> summary = _summarize(metrics_at_threshold(probas, t))
+    >>> summary = summarize(metrics_at_threshold(probas, t))
     >>> log_result("MLP", "binary", {"hidden_layer_sizes": (16,), "max_iter": 200}, t, summary)
     """
 
-    row = {
+    row = pd.DataFrame([{
         "model": model_name,
         "task": task,
         "config": json.dumps(config, sort_keys=True, default=str),
         "threshold": threshold,
         **summary,
-    }
-    new_file = (not path.exists()) or path.stat().st_size == 0
-    pd.DataFrame([row]).to_csv(path, mode="a", header=new_file, index=False)
+    }])
+    path = Path(path)
+    if path.exists() and path.stat().st_size > 0:
+        log = pd.read_csv(path)
+        same = ((log["model"] == model_name) & (log["task"] == task)
+                & (log["config"] == row.at[0, "config"])).to_numpy()
+        # replace the old row at its position (or append if the config is new)
+        pos = int(same.argmax()) if same.any() else len(log)
+        keep = log[~same]
+        row = pd.concat([keep.iloc[:pos], row, keep.iloc[pos:]], ignore_index=True)
+    row.to_csv(path, index=False)
 
 
 ###########################--MULTICLASS-VERSION--##############################
-
-from .data import CLASSES
 
 LABELS = list(range(len(CLASSES)))               # [0, 1, 2, 3, 4]
 NAMES = [c.replace(" ", "_") for c in CLASSES]   # safe column names

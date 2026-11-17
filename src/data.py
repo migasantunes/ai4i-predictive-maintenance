@@ -95,14 +95,13 @@ def preprocess(df, task):
     task: str, either "binary" or "multi"
 
     Returns:
-    X: pd.DataFrame, raw + engineered features
+    X: pd.DataFrame, raw + engineered numeric features and the raw "Type" column (L/M/H).
+        Type is encoded later by make_preprocessor(), not here.
     y: pd.Series, target depending on binary or multiclass
     """
 
     df = add_features(df.drop(rows_to_drop(df, task)))
     X = df[NUMERIC + ["Type"]].copy()
-    X["Type"] = pd.Categorical(X["Type"], categories=["L", "M", "H"])
-    X = pd.get_dummies(X, columns=["Type"], dtype=int)
     if task == "binary":
         y = df["Machine failure"]
     else:
@@ -110,7 +109,15 @@ def preprocess(df, task):
     return X, y.rename("target")
 
 def make_preprocessor(scale=True):
-    """One-hot Type, and standardise the numeric columns if scale=True. Fit on training data only."""
+    """
+    One-hot encode Type (columns Type_L, Type_M, Type_H) and standardise the
+    numeric columns if scale=True. Output column order: NUMERIC, then Type_L/M/H.
+
+    scale=True (MLP): the scaler learns means and stds, so the preprocessor goes
+        inside a Pipeline and is fitted on the training folds only.
+    scale=False (Random Forest): nothing is learned from the data (the Type
+        categories are fixed), so it can be applied once to the whole split.
+    """
 
     num = StandardScaler() if scale else "passthrough"
     return ColumnTransformer([

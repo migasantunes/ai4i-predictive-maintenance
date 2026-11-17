@@ -1,18 +1,18 @@
-[{"mlp_bin": {"hidden_layer_sizes": [64, 32, 16],  
-              "alpha": 0.05089, 
-              "learning_rate_init": 0.006978, 
-              "max_iter": 600},
-  "mlp_multi": {"hidden_layer_sizes": [32],
-                "alpha": 1.2e-05, 
-                "learning_rate_init": 0.00278, 
-                "max_iter": 600}, 
-  "rf_bin": {"n_estimators": 200, 
-             "max_depth": 5,  
-             "min_samples_leaf": 2, 
-             "max_features": 1.0, 
-             "class_weight": null}, 
-  "rf_multi": {"n_estimators": 300, 
-               "max_depth": null, 
-               "min_samples_leaf": 1, 
-               "max_features": 0.5, 
-               "class_weight": "none"}}]
+{
+  "mlp_bin": {
+    "params": {"hidden_layer_sizes": [64, 32, 16], "alpha": 0.05089035297840712, "learning_rate_init": 0.0069782812651260325, "max_iter": 600},
+    "decision": 0.25
+  },
+  "mlp_multi": {
+    "params": {"hidden_layer_sizes": [32], "alpha": 1.2087541473056957e-05, "learning_rate_init": 0.0027796975515266818, "max_iter": 600},
+    "decision": 0.40
+  },
+  "rf_bin": {
+    "params": {"n_estimators": 200, "max_depth": 5, "min_samples_leaf": 2, "max_features": 1.0, "class_weight": null},
+    "decision": 0.40
+  },
+  "rf_multi": {
+    "params": {"n_estimators": 300, "max_depth": null, "min_samples_leaf": 1, "max_features": 0.5, "class_weight": "none"},
+    "decision": 0.25
+  }
+}
