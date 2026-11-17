@@ -48,11 +48,8 @@ ai4i-predictive-maintenance/
 │   ├── best_params.json             # the 4 frozen configurations and decision values (model-selection meeting)
 │   ├── final_metrics.csv            # validation (mean, std) and test metrics, all 4 models
 │   └── figures/                     # EDA plots, tuning curves, learning curves, test confusion matrices
-├── report/
-│   └── ML_report.pdf                # results report (3 pages)
-└── documentation/
-    ├── project_brief.md             # assignment brief
-    └── project_plan.md              # team plan, roles and tasks
+└── report/
+    └── ML_report.pdf                # results report (3 pages)
 ```
 
 ## Data Download
